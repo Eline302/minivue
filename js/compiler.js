@@ -68,6 +68,11 @@ class Compiler {
         // 获取指令对应的方法
         let updateFn = this[`${attrName}Updater`]
         updateFn && updateFn.call(this, node, key, this.vm[key])
+         // 处理 v-on 指令
+         if (attrName.startsWith('on:')) {
+            const eventType = attrName.split(':')[1]
+            this.onUpdater(node, key, this.vm[key], eventType)
+        }
     }
     // v-text指令操作
     textUpdater(node, key, value){
@@ -79,13 +84,27 @@ class Compiler {
     // v-model指令操作
     modelUpdater(node, key, value){
         node.value = value
-        console.log(node);
         new Watcher(this.vm, key, (newValue)=>{
             node.value = newValue
         })
         // 双向绑定
         addEventListener('input',()=>{
             this.vm[key] = node.value
+        })
+    }
+    // v-html指令操作
+    htmlUpdater(node, key, value){
+        node.innerHTML = value
+        new Watcher(this.vm, key, (newValue)=>{
+            node.innerHTML = newValue
+        })
+    }
+    // v-on指令操作
+    onUpdater (node, key, value, eventType) {
+        node.addEventListener(eventType, value)
+        new Watcher(this.vm, key, newValue => {
+            node.removeEventListener(eventType, value)
+            node.addEventListener(eventType, newValue)
         })
     }
     // 判断元素属性是否是指令
